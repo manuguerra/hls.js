@@ -172,7 +172,7 @@ class PlaylistLoader extends EventHandler {
               fragdecryptdata = levelkey;
             }
             var url = result[2] ? this.resolve(result[2], baseurl) : null;
-            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
+            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc++, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
             level.fragments.push(frag);
             totalduration += duration;
             byteRangeStartOffset = null;
