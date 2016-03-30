@@ -123,7 +123,10 @@ class PlaylistLoader extends EventHandler {
         result,
         regexp,
         byteRangeEndOffset,
-        byteRangeStartOffset;
+        byteRangeStartOffset,
+		nextTimestamp;
+
+	var re =  /(\d+)_\d+.ts/;
 
     regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
     while ((result = regexp.exec(string)) !== null) {
@@ -172,7 +175,22 @@ class PlaylistLoader extends EventHandler {
               fragdecryptdata = levelkey;
             }
             var url = result[2] ? this.resolve(result[2], baseurl) : null;
-            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc++, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
+
+			var match = re.exec( url );
+			var timestamp = (match && match[1]) ? match[1] : null;
+
+			if (timestamp && nextTimestamp) {
+				timestamp = parseInt( timestamp );
+				if ( timestamp - nextTimestamp > 5000 ) {
+					console.log( timestamp + ' ' + nextTimestamp + ' ' + url );
+					cc++;
+				}
+			}
+
+			nextTimestamp = timestamp + duration*1000;
+
+            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
+
             level.fragments.push(frag);
             totalduration += duration;
             byteRangeStartOffset = null;
@@ -223,6 +241,7 @@ class PlaylistLoader extends EventHandler {
         id2 = this.id2,
         hls = this.hls,
         levels;
+
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     if (url === undefined) {
       // fallback to initial URL
