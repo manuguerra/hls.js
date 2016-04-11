@@ -88,9 +88,9 @@ class LevelHelper {
 	}
 
    if( Math.abs(startPTS - endPTS) > 100) {
-	   var old_endPTS = endPTS;
+	   // var oldEndPTS = endPTS;
 	   endPTS = startPTS + frag.duration;
-	   console.info('adjusting endPTS: ' + old_endPTS + ' -> ' + endPTS);
+	   // console.info('adjusting endPTS: ' + oldEndPTS + ' -> ' + endPTS);
    }
 
     var drift = startPTS - frag.start;
@@ -126,13 +126,11 @@ class LevelHelper {
         fragFrom.duration = fragToPTS-fragFrom.start;
         if(fragFrom.duration < 0) {
           logger.error(`negative duration computed for frag ${fragFrom.sn},level ${fragFrom.level}, there should be some duration drift between playlist and fragment!`);
-		  debugger;
         }
       } else {
         fragTo.duration = fragFrom.start - fragToPTS;
         if(fragTo.duration < 0) {
           logger.error(`negative duration computed for frag ${fragTo.sn},level ${fragTo.level}, there should be some duration drift between playlist and fragment!`);
-		  debugger;
         }
       }
     } else {

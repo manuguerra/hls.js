@@ -1050,7 +1050,6 @@ _checkBuffer() {
   }
 
   onFragLoadEmergencyAborted() {
-	  debugger;
     this.state = State.IDLE;
     this.tick();
   }

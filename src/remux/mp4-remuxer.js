@@ -130,10 +130,8 @@ class MP4Remuxer {
         // this._initPTS = t0*pesTimeScale;//initPTS;
         // this._initDTS = t0*pesTimeScale;//initDTS;
 
-		  console.info("!!");
         this._initPTS = initPTS;
         this._initDTS = initDTS;
-		console.info('initPTS: ' + initPTS + ' t0*90000: ' + t0*90000);
       }
     }
   }
@@ -202,16 +200,15 @@ class MP4Remuxer {
     mp4SampleDuration = Math.round((lastDTS-firstDTS)/(pes2mp4ScaleFactor*(inputSamples.length-1)));
 
 	if (lastDTS <= firstDTS) {
-		debugger;
 		lastDTS = firstDTS;
 		mp4SampleDuration = 0;
 		console.warn('lastDTS < firstDTS');
-	};
+	}
 	console.info( '( lastDTS - firstDTS ) / 90000 : ' + (lastDTS - firstDTS)/90000);
 	var oldPTS = firstPTS;
 	// firstPTS = firstDTS = Math.round(t0*90000);
 	console.log('firstPTS: '  + oldPTS + ' -> ' + t0*90000);
-	if ( Math.abs(oldPTS - firstPTS) > 10000 ) console.warn('this could have caused a fragLoop error');
+	if ( Math.abs(oldPTS - firstPTS) > 10000 ) { console.warn('this could have caused a fragLoop error'); }
 
 
     // normalize all PTS/DTS now ...
@@ -299,6 +296,7 @@ class MP4Remuxer {
         firstPTS, firstDTS, lastDTS,
         pts, dts, ptsnorm, dtsnorm,
         samples = [],
+        pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
         samples0 = [];
 
     track.samples.sort(function(a, b) {
@@ -321,7 +319,7 @@ class MP4Remuxer {
         mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
         if(Math.abs(mp4Sample.duration - expectedSampleDuration) > expectedSampleDuration/10) {
           // more than 10% diff between sample duration and expectedSampleDuration .... lets log that
-          logger.trace(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration*track.audiosamplerate/track.timescale)}`);
+          // logger.trace(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration*track.audiosamplerate/track.timescale)}`);
         }
         // always adjust sample duration to avoid av sync issue
         mp4Sample.duration = expectedSampleDuration;
