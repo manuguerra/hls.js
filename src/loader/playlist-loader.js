@@ -23,6 +23,7 @@ class PlaylistLoader extends EventHandler {
       this.loader = null;
     }
     this.url = this.id = null;
+	this.totalDuration = 0;
     EventHandler.prototype.destroy.call(this);
   }
 
@@ -32,6 +33,7 @@ class PlaylistLoader extends EventHandler {
 
   onLevelLoading(data) {
     this.load(data.url, data.level, data.id);
+	this.totalDuration = data.totalDuration || 0;
   }
 
   load(url, id1, id2) {
@@ -229,6 +231,16 @@ class PlaylistLoader extends EventHandler {
     }
     level.totalduration = totalduration;
     level.endSN = currentSN - 1;
+
+	if (level.live) {
+		var endPTS;
+		for (var i in level.fragments) {
+			var f = level.fragments[i];
+			f.start = parseInt( this.totalDuration );
+			endPTS = f.endPTS;
+		}
+		level.totalduration = endPTS ? endPTS : level.totalduration + this.totalDuration;
+	}
     return level;
   }
 
