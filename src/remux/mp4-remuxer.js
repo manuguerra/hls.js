@@ -168,7 +168,7 @@ class MP4Remuxer {
 
 	var firstSampleDTS = sample.dts;
 	firstPTS = firstDTS = Math.round(t0 * pesTimeScale);
-	console.info( 'firstPTS #1: ' + firstPTS );
+	logger.info( 'firstPTS #1: ' + firstPTS );
 
     // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
 //     let delta = Math.round((firstDTS - nextAvcDts) / 90);
@@ -204,10 +204,10 @@ class MP4Remuxer {
 		mp4SampleDuration = 0;
 		console.warn('lastDTS < firstDTS');
 	}
-	console.info( '( lastDTS - firstDTS ) / 90000 : ' + (lastDTS - firstDTS)/90000);
+	logger.info( '( lastDTS - firstDTS ) / 90000 : ' + (lastDTS - firstDTS)/90000);
 	var oldPTS = firstPTS;
 	// firstPTS = firstDTS = Math.round(t0*90000);
-	console.log('firstPTS: '  + oldPTS + ' -> ' + t0*90000);
+	logger.info('firstPTS: '  + oldPTS + ' -> ' + t0*90000);
 	if ( Math.abs(oldPTS - firstPTS) > 10000 ) { console.warn('this could have caused a fragLoop error'); }
 
 

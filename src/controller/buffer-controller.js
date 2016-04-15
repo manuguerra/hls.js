@@ -261,7 +261,7 @@ class BufferController extends EventHandler {
 		  // 	sourceBuffer[segment.type].timestampOffset = 15;
 		  // }, 5);
 
-		  console.info(segment);
+		  logger.info(segment);
           this.appendError = 0;
           this.appended++;
         } catch(err) {

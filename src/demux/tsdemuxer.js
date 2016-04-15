@@ -53,7 +53,7 @@
 
   // feed incoming data to the front of the parsing pipeline
   push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
-	  console.log('tsdemuxer t0: ' + t0);
+    logger.info('tsdemuxer t0: ' + t0);
     var avcData, aacData, id3Data,
         start, len = data.length, stt, pid, atf, offset,
         codecsOnly = this.remuxer.passthrough;
@@ -190,7 +190,7 @@
   }
 
   remux(data, t0) {
-	  console.log('tsdemuxer passing t0 to remux: ' + t0);
+	logger.info('tsdemuxer passing t0 to remux: ' + t0);
     this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
   }
 

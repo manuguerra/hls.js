@@ -291,11 +291,11 @@ class StreamController extends EventHandler {
           if(frag) {
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
             if ((frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
-              logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
+              logger.info(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
               this.state = State.KEY_LOADING;
               hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
-              logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+              logger.info(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
               frag.autoLevel = hls.autoLevelEnabled;
               if (this.levels.length > 1) {
                 frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
@@ -592,7 +592,7 @@ class StreamController extends EventHandler {
       // check if currently loaded fragment is inside buffer.
       //if outside, cancel fragment loading, otherwise do nothing
       if (BufferHelper.bufferInfo(this.media,this.media.currentTime,this.config.maxBufferHole).len === 0) {
-        logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
+        logger.info('seeking outside of buffer while fragment load in progress, cancel fragment load');
         var fragCurrent = this.fragCurrent;
         if (fragCurrent) {
           if (fragCurrent.loader) {
@@ -856,7 +856,7 @@ class StreamController extends EventHandler {
       var level = this.levels[this.level],
           frag = this.fragCurrent;
 
-      logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
+      logger.info(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
 
       var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS),
           hls = this.hls;
@@ -910,7 +910,7 @@ class StreamController extends EventHandler {
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag});
 		// console.info(stats);
 		// console.info(frag);
-        logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
+        logger.info(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
         this.state = State.IDLE;
       }
       this.tick();

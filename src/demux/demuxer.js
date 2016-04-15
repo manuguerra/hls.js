@@ -46,7 +46,7 @@ class Demuxer {
   }
 
   pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
-	  console.log('pushDecrypted t0: ' + t0);
+	logger.info('pushDecrypted t0: ' + t0);
     if (this.w) {
       // post fragment payload as transferable objects (no copy)
       this.w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration}, [data]);
