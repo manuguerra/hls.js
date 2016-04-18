@@ -86,6 +86,7 @@
         aacId = this._aacTrack.id,
         id3Id = this._id3Track.id;
 
+	var firstFrame = true;
     // don't parse last TS packet if incomplete
     len -= len % 188;
     // loop through TS packets
@@ -109,7 +110,8 @@
           if (pid === avcId) {
             if (stt) {
               if (avcData) {
-                this._parseAVCPES(this._parsePES(avcData));
+                var isFrameOkForChromeOSX = this._parseAVCPES(this._parsePES(avcData), firstFrame);
+				if (isFrameOkForChromeOSX) { firstFrame = false; }
                 if (codecsOnly) {
                   // if we have video codec info AND
                   // if audio PID is undefined OR if we have audio codec info,
@@ -310,7 +312,7 @@
     }
   }
 
-  _parseAVCPES(pes) {
+  _parseAVCPES(pes, firstFrame) {
     var track = this._avcTrack,
         samples = track.samples,
         units = this._parseAVCNALu(pes.data),
@@ -338,10 +340,26 @@
     pes.data = null;
     var debugString = '';
 
+	var types = '';
+	var shouldExit = false;
+
     units.forEach(unit => {
+		if (shouldExit) return;
+		types += ' ' + unit.type;
       switch(unit.type) {
         //NDR
          case 1:
+		   if( firstFrame &&
+			   navigator.appVersion.indexOf("Mac") > -1 && 
+			   navigator.userAgent.toLowerCase().indexOf('chrome') > -1
+		   ) { 
+
+			   console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
+			   push = false;
+			   shouldExit = true;
+			   return false;
+			   break;
+		   }
            push = true;
            if(debug) {
             debugString += 'NDR ';
@@ -357,6 +375,16 @@
           break;
         //SEI
         case 6:
+		   if( firstFrame && 
+			   navigator.appVersion.indexOf("Mac") > -1 && 
+			   navigator.userAgent.toLowerCase().indexOf('chrome') > -1
+		   ) { 
+			    console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
+			    push = false;
+				shouldExit = true;
+				return false;
+			    break;
+		    }
           push = true;
           if(debug) {
             debugString += 'SEI ';
@@ -468,6 +496,17 @@
         length+=unit.data.byteLength;
       }
     });
+
+	if (firstFrame) { 
+		types = '** ' + types; 
+		console.info(types + '');
+	}
+
+	if (shouldExit) {
+		console.warn('skipping frame');
+		return false;
+	}
+
     if(debug || debugString.length) {
       logger.log(debugString);
     }
@@ -482,6 +521,7 @@
         track.nbNalu += units2.length;
       }
     }
+	return true;
   }
 
 
