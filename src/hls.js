@@ -16,6 +16,7 @@ import TimelineController from './controller/timeline-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
+import WrtcLoader from './utils/wrtc-loader-2';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
 
@@ -69,7 +70,7 @@ class Hls {
           // fpsDroppedMonitoringPeriod: 5000,
           // fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
-          loader: XhrLoader,
+          loader: WrtcLoader,
           fLoader: undefined,
           pLoader: undefined,
           abrController : AbrController,

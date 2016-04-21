@@ -18,6 +18,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   destroy() {
+	  console.log('destroy');
     if (this.loader) {
       this.loader.destroy();
       this.loader = null;

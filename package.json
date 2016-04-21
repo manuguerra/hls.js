@@ -35,18 +35,20 @@
     "babel": "babel src --out-dir lib"
   },
   "dependencies": {
+    "msgpack-js-browser": "^0.1.4",
     "webworkify": "^1.0.2"
   },
   "devDependencies": {
-    "babel-preset-es2015": "^6.3.13",
-    "babel-register": "^6.3.13",
-    "babelify": "^7.2.0",
     "arraybuffer-equal": "^1.0.4",
     "babel": "^6.3.26",
     "babel-cli": "^6.3.17",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-register": "^6.3.13",
+    "babelify": "^7.2.0",
     "browserify": "^13.0.0",
     "deep-strict-equal": "^0.1.0",
     "exorcist": "^0.4.0",
+    "grunt": "^1.0.1",
     "http-server": "^0.9.0",
     "jshint": "^2.5.11",
     "live-reload": "^1.1.0",
