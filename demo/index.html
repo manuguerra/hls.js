@@ -223,7 +223,7 @@ $(document).ready(function() {
   var hls,events, stats,
       enableStreaming = JSON.parse(getURLParam('enableStreaming',true))
       autoRecoverError = JSON.parse(getURLParam('autoRecoverError',true)),
-      enableWorker = JSON.parse(getURLParam('enableWorker',false)),
+      enableWorker = JSON.parse(getURLParam('enableWorker',true)),
       levelCapping = JSON.parse(getURLParam('levelCapping',-1)),
       defaultAudioCodec = getURLParam('defaultAudioCodec',undefined);
   var video = $('#video')[0];
