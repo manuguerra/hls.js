@@ -343,6 +343,8 @@
 	var types = '';
 	var shouldExit = false;
 
+	var SEICounter = 0;
+
     units.forEach(unit => {
 		if (shouldExit) return;
 		types += ' ' + unit.type;
@@ -375,9 +377,11 @@
           break;
         //SEI
         case 6:
+		   SEICounter++;
 		   if( firstFrame && 
 			   navigator.appVersion.indexOf("Mac") > -1 && 
-			   navigator.userAgent.toLowerCase().indexOf('chrome') > -1
+			   navigator.userAgent.toLowerCase().indexOf('chrome') > -1 &&
+			   SEICounter > 1
 		   ) { 
 			    console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
 			    push = false;
