@@ -8,29 +8,28 @@ class WrtcLoader {
 
   constructor(config) {
 	  if (!WrtcLoader.wrtc) { 
-	    WrtcLoader.wrtc = new WRTCRequest( dataChannel );
+		  WrtcLoader.wrtc = new WRTCRequest( config.dataChannel );
 	  }
-    if (config && config.xhrSetup) {
-      this.xhrSetup = config.xhrSetup;
-    }
+	  if (config && config.xhrSetup) {
+		  this.xhrSetup = config.xhrSetup;
+	  }
   }
 
   destroy() {
-    this.abort();
-    this.loader = null;
+	  this.abort();
+	  this.loader = null;
   }
 
   abort() {
-	console.log('aborting request');
-	var self = this;
+	  logger.debug('aborting request');
+	  var self = this;
 	  WrtcLoader.wrtc.cancelRequest({
 		  request_id: self.request_id
 	  }, function(err, d) {
 		  if( err ) { console.error(err); }
-		  console.log('request cancelled');
+		  logger.debug('request cancelled');
 	  });
-		console.log('aborted');
-      this.stats.aborted = true;
+	  this.stats.aborted = true;
   }
 
   load(url, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
@@ -107,7 +106,7 @@ class WrtcLoader {
 	  var self = this;
 
 		if (req && req.type == 'playlist') {
-			console.log('getting playlist');
+			logger.debug('getting playlist');
 			WrtcLoader.wrtc.getPlaylist({
 				format:    'hls',
 				container: 'ts',
@@ -158,12 +157,11 @@ class WrtcLoader {
 			}, function(err, d) {
 
 				if (err == 'timeout') {
-					console.error('timeout');
+					logger.debug('timeout');
 					if (self.timeout) { self.timeout(); }
 					return;
 				}
 				var status = 200;
-				//console.log(d);
 				if (!d || err) { 
 					console.error(err); 
 					d = '';
@@ -228,7 +226,7 @@ class WrtcLoader {
     var xhr = event.currentTarget,
         status = xhr.status,
         stats = this.stats;
-	// debugger;
+
     // don't proceed if xhr has been aborted
     if (!stats.aborted) {
         // http status between 200 to 299 are all successful
@@ -237,7 +235,7 @@ class WrtcLoader {
           stats.tload = performance.now();
           this.onSuccess(event, stats);
       } else {
-		  console.log('stats.aborted; retry: ' + stats.retry);
+		  logger.debug('stats.aborted; retry: ' + stats.retry);
         // error ...
         if (stats.retry < this.maxRetry) {
           logger.warn(`${status} while loading ${this.url}, retrying in ${this.retryDelay}...`);
@@ -289,7 +287,7 @@ var WRTCRequest = function(dataChannel) {
 
 WRTCRequest.prototype.setupDataChannel = function() {
 
-	console.log('== setup data channel ==');
+	logger.info('== setup data channel ==');
 	var self = this;
 
     this.dataChannel.onmessage = function (e) {
@@ -301,13 +299,10 @@ WRTCRequest.prototype.setupDataChannel = function() {
 		if(req) { req.order = isNaN(req.order) ? 0 : ++req.order; }
 
 		if( !req ) {
-			// console.error('got a response without a matching request ' + data.request_id);
-			// console.error(data);
-			// console.log(self.requests);
 		} else if (req.order != data.order && data.request != 'cancel') {
 			req.ack = true;
-			console.error('order doesnt match with expected value; expected / received: ' + req.order + '/' + data.order);
-			console.log(data);
+			logger.warn('order doesnt match with expected value; expected / received: ' + req.order + '/' + data.order);
+			logger.warn(data);
 			req.cb( 'missing data' );
 		} else if (req.cancelled) {
 			// console.log('request ' + data.request_id + ' is cancelled');
@@ -322,7 +317,7 @@ WRTCRequest.prototype.setupDataChannel = function() {
 WRTCRequest.prototype.request = function( req, cb ) {
 	req.request_id = req.request_id || Date.now() + '_' + Math.random();
 
-	if (this.dataChannel.bufferedAmount > 0) console.log('buffered amount: ' + this.dataChannel.bufferedAmount);
+	// if (this.dataChannel.bufferedAmount > 0) logger.log('buffered amount: ' + this.dataChannel.bufferedAmount);
 
 	var self = this;
 
@@ -345,7 +340,7 @@ WRTCRequest.prototype.request = function( req, cb ) {
 	return {
 		id: req.request_id,
 		done: function() {
-			console.info('deleting request ' + req.message + ' ' + req.request_id);
+			logger.info('deleting request ' + req.message + ' ' + req.request_id);
 			delete self.requests[ req.request_id ];
 		}
 	};
@@ -370,7 +365,7 @@ WRTCRequest.prototype.getSnapshot = function( req, cb ) {
 	}, function(err, d) {
 
 		if(err) {
-			console.error(err);
+			logger.error(err);
 			cb( err, null );
 			r.done();
 			return;
