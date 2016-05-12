@@ -28,6 +28,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   onManifestLoading(data) {
+	this.creds = data.creds;
     this.load(data.url, null);
   }
 
@@ -54,7 +55,7 @@ class PlaylistLoader extends EventHandler {
       retryDelay = config.levelLoadingRetryDelay;
     }
     this.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-    this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+    this.loader.load(url, this.creds, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
   }
 
   resolve(url, baseUrl) {

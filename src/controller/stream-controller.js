@@ -321,7 +321,7 @@ class StreamController extends EventHandler {
               frag.loadIdx = this.fragLoadIdx;
               this.fragCurrent = frag;
               this.startFragRequested = true;
-              hls.trigger(Event.FRAG_LOADING, {frag: frag});
+              hls.trigger(Event.FRAG_LOADING, {frag: frag, creds: this.creds});
               this.state = State.FRAG_LOADING;
             }
           }
@@ -631,12 +631,13 @@ class StreamController extends EventHandler {
   }
 
 
-  onManifestLoading() {
+  onManifestLoading(data) {
     // reset buffer on manifest loading
     logger.log('trigger BUFFER_RESET');
     this.hls.trigger(Event.BUFFER_RESET);
     this.bufferRange = [];
     this.stalled = false;
+	this.creds = data.creds;
   }
 
   onManifestParsed(data) {
