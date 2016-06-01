@@ -29,7 +29,7 @@ class XhrLoader {
     }
   }
 
-  load(url, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
+  load(url, creds, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
     this.url = url;
     if (frag && !isNaN(frag.byteRangeStartOffset) && !isNaN(frag.byteRangeEndOffset)) {
         this.byteRange = frag.byteRangeStartOffset + '-' + (frag.byteRangeEndOffset-1);
@@ -44,6 +44,7 @@ class XhrLoader {
     this.maxRetry = maxRetry;
     this.retryDelay = retryDelay;
     this.loadInternal();
+	this.creds = creds;
   }
 
   loadInternal() {
@@ -62,6 +63,11 @@ class XhrLoader {
     if (this.byteRange) {
       xhr.setRequestHeader('Range', 'bytes=' + this.byteRange);
     }
+	if (this.creds) {
+		if (!this.creds.username) { console.warn('got credentials, but no username'); }
+		if (!this.creds.password) { console.warn('got credentials, but no password'); }
+		xhr.setRequestHeader( 'Authorization', 'Basic ' + btoa(this.creds.username + ':' + this.creds.password) );
+	}
     xhr.responseType = this.responseType;
     this.stats.tfirst = null;
     this.stats.loaded = 0;

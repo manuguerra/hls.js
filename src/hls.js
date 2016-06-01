@@ -164,11 +164,11 @@ class Hls {
     this.media = null;
   }
 
-  loadSource(url) {
+  loadSource(url, creds) {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(Event.MANIFEST_LOADING, {url: url});
+    this.trigger(Event.MANIFEST_LOADING, {url: url, creds: creds});
   }
 
   startLoad(startPosition=0) {
