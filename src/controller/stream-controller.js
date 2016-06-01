@@ -272,6 +272,14 @@ class StreamController extends EventHandler {
             if (foundFrag) {
               frag = foundFrag;
               start = foundFrag.start;
+                
+              // adjust quick load seek position if it is close to the end of fragment
+              var k = config.quickLoadSeekThreshold;
+              var end_pos = (1-k)*frag.duration + frag.start;
+              if (!this.initial_seek) {
+                this.initial_seek = (bufferEnd > end_pos ? end_pos : bufferEnd);
+              }
+
               //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
               if (fragPrevious && frag.level === fragPrevious.level && frag.sn === fragPrevious.sn) {
                 if (frag.sn < levelDetails.endSN) {
@@ -997,6 +1005,13 @@ _checkBuffer() {
           }
         }
         if (targetSeekPosition) {
+
+          // adjust quick load seek position if necessary
+          if (this.initial_seek) {
+              logger.info('adjusting initial seek: before/after: ' + targetSeekPosition + ' / ' + this.initial_seek);
+              targetSeekPosition = this.initial_seek;
+          }
+
           currentTime = targetSeekPosition;
           logger.log(`target seek position:${targetSeekPosition}`);
         }
