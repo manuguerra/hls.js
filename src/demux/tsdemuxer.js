@@ -352,7 +352,7 @@
         //NDR
          case 1:
 		   if( firstFrame &&
-			   navigator.appVersion.indexOf("Mac") > -1 && 
+			   navigator.appVersion.indexOf('Mac') > -1 && 
 			   navigator.userAgent.toLowerCase().indexOf('chrome') > -1
 		   ) { 
 
@@ -385,8 +385,8 @@
 		   ) { 
 			    console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
 			    push = false;
-				shouldExit = true;
-				return false;
+                            shouldExit = true;
+                            return false;
 			    break;
 		    }
           push = true;
@@ -455,7 +455,7 @@
           if(debug) {
             debugString += 'SPS ';
           }
-          if(!track.sps) {
+          if(!track._doneParsingSPS) {
             expGolombDecoder = new ExpGolomb(unit.data);
             var config = expGolombDecoder.readSPS();
             track.width = config.width;
@@ -501,15 +501,19 @@
       }
     });
 
-	if (firstFrame) { 
-		types = '** ' + types; 
-		console.info(types + '');
-	}
+    if (firstFrame) { 
+        types = '** ' + types; 
+        logger.info(types + '');
+    }
 
-	if (shouldExit) {
-		console.warn('skipping frame');
-		return false;
-	}
+    if (shouldExit) {
+        console.warn('skipping frame');
+        return false;
+    }
+
+    if (track.sps) {
+        track._doneParsingSPS = true;
+    }
 
     if(debug || debugString.length) {
       logger.log(debugString);
