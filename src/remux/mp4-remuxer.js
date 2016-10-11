@@ -56,7 +56,9 @@ class MP4Remuxer {
 		}
 	}
     //notify end of parsing
-    this.observer.trigger(Event.FRAG_PARSED);
+    this.observer.trigger(Event.FRAG_PARSED, {
+        fps: this.fps
+    });
   }
 
   generateIS(audioTrack,videoTrack,timeOffset, t0) {
@@ -199,6 +201,8 @@ class MP4Remuxer {
 	lastDTS = (sample.dts - firstSampleDTS) + firstPTS;
     mp4SampleDuration = Math.round((lastDTS-firstDTS)/(pes2mp4ScaleFactor*(inputSamples.length-1)));
 
+    this.fps = inputSamples.length / ( (lastDTS - firstDTS) / (pesTimeScale) );
+//
 	if (lastDTS <= firstDTS) {
 		lastDTS = firstDTS;
 		mp4SampleDuration = 0;
@@ -280,6 +284,7 @@ class MP4Remuxer {
       endPTS: (lastPTS + pes2mp4ScaleFactor * mp4SampleDuration) / pesTimeScale,
       startDTS: firstDTS / pesTimeScale,
       endDTS: this.nextAvcDts / pesTimeScale,
+      fps: this.fps,
       type: 'video',
       nb: outputSamples.length
     });
