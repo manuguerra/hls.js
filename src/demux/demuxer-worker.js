@@ -43,8 +43,8 @@ var DemuxerWorker = function (self) {
     self.postMessage(objData, [objData.data1, objData.data2]);
   });
 
-  observer.on(Event.FRAG_PARSED, function(event) {
-    self.postMessage({event: event});
+  observer.on(Event.FRAG_PARSED, function(event, data) {
+    self.postMessage({event: event, data: data});
   });
 
   observer.on(Event.ERROR, function(event, data) {

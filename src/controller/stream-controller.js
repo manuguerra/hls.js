@@ -385,6 +385,10 @@ class StreamController extends EventHandler {
     return null;
   }
 
+  getFPS() {
+      return this.fps;
+  }
+
   get currentLevel() {
     if (this.media) {
       var range = this.getBufferRange(this.media.currentTime);
@@ -888,12 +892,21 @@ class StreamController extends EventHandler {
     }
   }
 
-  onFragParsed() {
+  onFragParsed(data) {
+    this.fps = data.fps;
     if (this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
     }
+  }
+
+  skipFrame( nFrames ) {
+      nFrames = nFrames || 1;
+      if (this.fps && this.media) {
+          var dt = nFrames/this.fps;
+          this.media.currentTime = this.media.currentTime + dt;
+      }
   }
 
   onBufferAppended() {
