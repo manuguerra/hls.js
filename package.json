@@ -25,7 +25,7 @@
     "major": "npm run prerelease && mversion ma",
     "minify": "uglifyjs dist/hls.js -c sequences=true,dead_code=true,conditionals=true,booleans=true,unused=true,if_return=true,join_vars=true,drop_console=true -m sort --screw-ie8 > dist/hls.min.js",
     "watch": "watchify --debug -s Hls src/index.js -t [babelify] -o dist/hls.js",
-    "pretest": "npm run lint",
+    "pretest": "",
     "test": "mocha --compilers js:babel-register --recursive tests/unit",
     "lint": "jshint src/",
     "serve": "http-server -p 8000 .",
