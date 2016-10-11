@@ -152,6 +152,14 @@ class Hls {
     this.observer.removeAllListeners();
   }
 
+  skipFrame( nFrames ) {
+    return this.streamController.skipFrame( nFrames );
+  }
+
+  getFPS() {
+      return this.streamController.getFPS();
+  }
+
   attachMedia(media) {
     logger.log('attachMedia');
     this.media = media;
