@@ -437,34 +437,35 @@ class StreamController extends EventHandler {
 
   _checkFragmentChanged() {
     var rangeCurrent, currentTime, video = this.media;
-    if (video && video.seeking === false) {
-      currentTime = video.currentTime;
-      /* if video element is in seeked state, currentTime can only increase.
-        (assuming that playback rate is positive ...)
-        As sometimes currentTime jumps back to zero after a
-        media decode error, check this, to avoid seeking back to
-        wrong position after a media decode error
-      */
-      if(currentTime > video.playbackRate*this.lastCurrentTime) {
+
+    if (!video) { return; }
+
+    currentTime = video.currentTime;
+    /* if video element is in seeked state, currentTime can only increase.
+       (assuming that playback rate is positive ...)
+       As sometimes currentTime jumps back to zero after a
+       media decode error, check this, to avoid seeking back to
+       wrong position after a media decode error
+       */
+    if(currentTime > video.playbackRate*this.lastCurrentTime) {
         this.lastCurrentTime = currentTime;
-      }
-      if (this.isBuffered(currentTime)) {
+    }
+    if (this.isBuffered(currentTime)) {
         rangeCurrent = this.getBufferRange(currentTime);
       } else if (this.isBuffered(currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
-          when first video frame is displayed and playback is paused.
-          add a tolerance of 100ms, in case current position is not buffered,
-          check if current pos+100ms is buffered and use that buffer range
-          for FRAG_CHANGED event reporting */
+           when first video frame is displayed and playback is paused.
+           add a tolerance of 100ms, in case current position is not buffered,
+           check if current pos+100ms is buffered and use that buffer range
+           for FRAG_CHANGED event reporting */
         rangeCurrent = this.getBufferRange(currentTime + 0.1);
-      }
-      if (rangeCurrent) {
+    }
+    if (rangeCurrent) {
         var fragPlaying = rangeCurrent.frag;
         if (fragPlaying !== this.fragPlaying) {
-          this.fragPlaying = fragPlaying;
-          this.hls.trigger(Event.FRAG_CHANGED, {frag: fragPlaying});
+            this.fragPlaying = fragPlaying;
+            this.hls.trigger(Event.FRAG_CHANGED, {frag: fragPlaying});
         }
-      }
     }
   }
 
@@ -777,7 +778,8 @@ class StreamController extends EventHandler {
 // 		var m = re.exec(fragCurrent.url);
 // 		var t0 = (m && m[1]) ? parseInt( m[1] )/1000 : 0;
 //
-        this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, start);
+        var nextBufferStart = BufferHelper.nextBufferAfterPos( this.media, start);
+        this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, start, nextBufferStart);
       }
     }
     this.fragLoadError = 0;
@@ -879,6 +881,7 @@ class StreamController extends EventHandler {
         if (buffer) {
           this.pendingAppending++;
           hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer});
+          // hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, end: data.endPTS});
         }
       });
 
@@ -1031,7 +1034,7 @@ _checkBuffer() {
         }
         var bufferInfo = BufferHelper.bufferInfo(media,currentTime,0),
             expectedPlaying = !(media.paused || media.ended || media.seeking || readyState < 2),
-            jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
+            jumpThreshold = 5, // tolerance needed as some browsers stalls playback before reaching buffered range end
             playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime;
 
         if (this.stalled && playheadMoving) {

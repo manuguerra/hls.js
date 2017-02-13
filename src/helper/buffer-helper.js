@@ -73,6 +73,15 @@ class BufferHelper {
     return {len: bufferLen, start: bufferStart, end: bufferEnd, nextStart : bufferStartNext};
   }
 
+  static nextBufferAfterPos( media, pos ) {
+
+      if (!media || !media.buffered) { return; }
+
+      for (let i = 0; i < media.buffered.length; i++) {
+        if (media.buffered.start(i) <= pos) { continue; }
+        return media.buffered.start(i);
+      }
+  }
 }
 
 export default BufferHelper;

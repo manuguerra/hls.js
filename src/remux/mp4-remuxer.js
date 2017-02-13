@@ -32,7 +32,8 @@ class MP4Remuxer {
     this.ISGenerated = false;
   }
 
-  remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous, data, t0) {
+  remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous, data, t0, nextBufferStart) {
+      // console.log('MP4 Remuxer: next buffer start: ' + nextBufferStart);
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset, t0);
@@ -40,7 +41,7 @@ class MP4Remuxer {
 	if (this.ISGenerated) {
 		//logger.log('nb AVC samples:' + videoTrack.samples.length);
 		if (videoTrack.samples.length) {
-		  this.remuxVideo(videoTrack,timeOffset,contiguous, t0);
+		  this.remuxVideo(videoTrack,timeOffset,contiguous, t0, nextBufferStart);
 		}
 		//logger.log('nb AAC samples:' + audioTrack.samples.length);
 		if (audioTrack.samples.length) {
@@ -138,7 +139,7 @@ class MP4Remuxer {
     }
   }
 
-  remuxVideo(track, timeOffset, contiguous, t0) {
+  remuxVideo(track, timeOffset, contiguous, t0, nextBufferStart) {
     var offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
         pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
@@ -196,10 +197,25 @@ class MP4Remuxer {
     // let's signal the same sample duration for all samples
     // set this constant duration as being the avg delta between consecutive DTS.
     sample = inputSamples[inputSamples.length-1];
-    lastDTS = Math.max(this._PTSNormalize(sample.dts,nextAvcDts) - this._initDTS,0);
+    // lastDTS = Math.max(this._PTSNormalize(sample.dts,nextAvcDts) - this._initDTS,0);
 
-	lastDTS = (sample.dts - firstSampleDTS) + firstPTS;
+    lastDTS = (sample.dts - firstSampleDTS) + firstPTS;
     mp4SampleDuration = Math.round((lastDTS-firstDTS)/(pes2mp4ScaleFactor*(inputSamples.length-1)));
+
+    var segmentEndTime = (lastDTS + mp4SampleDuration*pes2mp4ScaleFactor) / pesTimeScale;
+    var bufferOffset = segmentEndTime - nextBufferStart;
+    if (bufferOffset > 0 && bufferOffset < 2) {
+        bufferOffset += 0.1; // add extra offset
+        // console.log('next buffer start: adjusting offset: ' + bufferOffset);
+        let oldPTS = firstPTS;
+        let newFirstPTS = firstPTS = firstPTS - Math.round( bufferOffset * pesTimeScale );
+        // console.log('previous firstPTS: ' + oldPTS + '  next firstPTS: ' + newFirstPTS); 
+        firstDTS = firstPTS = newFirstPTS;
+	lastDTS = (sample.dts - firstSampleDTS) + firstPTS;
+        mp4SampleDuration = Math.round((lastDTS-firstDTS)/(pes2mp4ScaleFactor*(inputSamples.length-1)));
+    } else if (bufferOffset > 2) {
+        // console.log('NOT adjusting; bufferOffset over threshold: ' + bufferOffset);
+    }
 
     this.fps = inputSamples.length / ( (lastDTS - firstDTS) / (pesTimeScale) );
 //
@@ -283,7 +299,7 @@ class MP4Remuxer {
       startPTS: firstPTS / pesTimeScale,
       endPTS: (lastPTS + pes2mp4ScaleFactor * mp4SampleDuration) / pesTimeScale,
       startDTS: firstDTS / pesTimeScale,
-      endDTS: this.nextAvcDts / pesTimeScale,
+      endDTS: (lastPTS + pes2mp4ScaleFactor * mp4SampleDuration) / pesTimeScale,
       fps: this.fps,
       type: 'video',
       nb: outputSamples.length

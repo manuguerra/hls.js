@@ -52,8 +52,9 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
-    logger.info('tsdemuxer t0: ' + t0);
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart) {
+    // logger.info('tsdemuxer t0: ' + t0);
+    // console.log('tsdemuer next buffer start: ' + nextBufferStart);
     var avcData, aacData, id3Data,
         start, len = data.length, stt, pid, atf, offset,
         codecsOnly = this.remuxer.passthrough;
@@ -117,7 +118,7 @@
                   // if audio PID is undefined OR if we have audio codec info,
                   // we have all codec info !
                   if (this._avcTrack.codec && (aacId === -1 || this._aacTrack.codec)) {
-                    this.remux(data, t0);
+                    this.remux(data, t0, nextBufferStart);
                     return;
                   }
                 }
@@ -137,7 +138,7 @@
                   // if video PID is undefined OR if we have video codec info,
                   // we have all codec infos !
                   if (this._aacTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
-                    this.remux(data, t0);
+                    this.remux(data, t0, nextBufferStart);
                     return;
                   }
                 }
@@ -188,12 +189,12 @@
     if (id3Data) {
       this._parseID3PES(this._parsePES(id3Data));
     }
-    this.remux(null, t0);
+    this.remux(null, t0, nextBufferStart);
   }
 
-  remux(data, t0) {
+  remux(data, t0, nextBufferStart) {
 	logger.info('tsdemuxer passing t0 to remux: ' + t0);
-    this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
+    this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0, nextBufferStart);
   }
 
   destroy() {

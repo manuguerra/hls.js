@@ -45,17 +45,20 @@ class Demuxer {
     }
   }
 
-  pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
-	logger.info('pushDecrypted t0: ' + t0);
+  pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart) {
+	// logger.info('pushDecrypted t0: ' + t0);
+        // console.log('demuxer push decrypted: next buffer start: ' + nextBufferStart );
+
     if (this.w) {
       // post fragment payload as transferable objects (no copy)
-      this.w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration, t0: t0}, [data]);
+      this.w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration, t0: t0, nextBufferStart: nextBufferStart}, [data]);
     } else {
-      this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0);
+      this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart);
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, t0) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, t0, nextBufferStart) {
+      // console.log('demuxer push: nextBufferStart: ' + nextBufferStart);
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       if (this.decrypter == null) {
         this.decrypter = new Decrypter(this.hls);
@@ -63,10 +66,10 @@ class Demuxer {
 
       var localthis = this;
       this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function(decryptedData){
-        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0);
+        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart);
       });
     } else {
-      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0);
+      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart);
     }
   }
 
