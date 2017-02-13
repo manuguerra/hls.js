@@ -1951,33 +1951,36 @@ var StreamController = function (_EventHandler) {
       var rangeCurrent,
           currentTime,
           video = this.media;
-      if (video && video.seeking === false) {
-        currentTime = video.currentTime;
-        /* if video element is in seeked state, currentTime can only increase.
-          (assuming that playback rate is positive ...)
-          As sometimes currentTime jumps back to zero after a
-          media decode error, check this, to avoid seeking back to
-          wrong position after a media decode error
-        */
-        if (currentTime > video.playbackRate * this.lastCurrentTime) {
-          this.lastCurrentTime = currentTime;
-        }
-        if (this.isBuffered(currentTime)) {
-          rangeCurrent = this.getBufferRange(currentTime);
-        } else if (this.isBuffered(currentTime + 0.1)) {
-          /* ensure that FRAG_CHANGED event is triggered at startup,
-            when first video frame is displayed and playback is paused.
-            add a tolerance of 100ms, in case current position is not buffered,
-            check if current pos+100ms is buffered and use that buffer range
-            for FRAG_CHANGED event reporting */
-          rangeCurrent = this.getBufferRange(currentTime + 0.1);
-        }
-        if (rangeCurrent) {
-          var fragPlaying = rangeCurrent.frag;
-          if (fragPlaying !== this.fragPlaying) {
-            this.fragPlaying = fragPlaying;
-            this.hls.trigger(_events2.default.FRAG_CHANGED, { frag: fragPlaying });
-          }
+
+      if (!video) {
+        return;
+      }
+
+      currentTime = video.currentTime;
+      /* if video element is in seeked state, currentTime can only increase.
+         (assuming that playback rate is positive ...)
+         As sometimes currentTime jumps back to zero after a
+         media decode error, check this, to avoid seeking back to
+         wrong position after a media decode error
+         */
+      if (currentTime > video.playbackRate * this.lastCurrentTime) {
+        this.lastCurrentTime = currentTime;
+      }
+      if (this.isBuffered(currentTime)) {
+        rangeCurrent = this.getBufferRange(currentTime);
+      } else if (this.isBuffered(currentTime + 0.1)) {
+        /* ensure that FRAG_CHANGED event is triggered at startup,
+           when first video frame is displayed and playback is paused.
+           add a tolerance of 100ms, in case current position is not buffered,
+           check if current pos+100ms is buffered and use that buffer range
+           for FRAG_CHANGED event reporting */
+        rangeCurrent = this.getBufferRange(currentTime + 0.1);
+      }
+      if (rangeCurrent) {
+        var fragPlaying = rangeCurrent.frag;
+        if (fragPlaying !== this.fragPlaying) {
+          this.fragPlaying = fragPlaying;
+          this.hls.trigger(_events2.default.FRAG_CHANGED, { frag: fragPlaying });
         }
       }
     }
@@ -2308,7 +2311,8 @@ var StreamController = function (_EventHandler) {
           // 		var m = re.exec(fragCurrent.url);
           // 		var t0 = (m && m[1]) ? parseInt( m[1] )/1000 : 0;
           //
-          this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, start);
+          var nextBufferStart = _bufferHelper2.default.nextBufferAfterPos(this.media, start);
+          this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, start, nextBufferStart);
         }
       }
       this.fragLoadError = 0;
@@ -2416,6 +2420,7 @@ var StreamController = function (_EventHandler) {
           if (buffer) {
             _this3.pendingAppending++;
             hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer });
+            // hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, end: data.endPTS});
           }
         });
 
@@ -2575,7 +2580,7 @@ var StreamController = function (_EventHandler) {
           }
           var bufferInfo = _bufferHelper2.default.bufferInfo(media, currentTime, 0),
               expectedPlaying = !(media.paused || media.ended || media.seeking || readyState < 2),
-              jumpThreshold = 0.4,
+              jumpThreshold = 5,
               // tolerance needed as some browsers stalls playback before reaching buffered range end
           playheadMoving = currentTime > media.playbackRate * this.lastCurrentTime;
 
@@ -3659,7 +3664,7 @@ var DemuxerInline = function () {
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart) {
       var demuxer = this.demuxer;
       if (!demuxer) {
         var hls = this.hls;
@@ -3678,7 +3683,7 @@ var DemuxerInline = function () {
         }
         this.demuxer = demuxer;
       }
-      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0);
+      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart);
     }
   }]);
 
@@ -3734,7 +3739,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
         self.demuxer = new _demuxerInline2.default(observer, data.typeSupported);
         break;
       case 'demux':
-        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.t0);
+        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.t0, data.nextBufferStart);
         break;
       default:
         break;
@@ -3852,18 +3857,21 @@ var Demuxer = function () {
     }
   }, {
     key: 'pushDecrypted',
-    value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
-      _logger.logger.info('pushDecrypted t0: ' + t0);
+    value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart) {
+      // logger.info('pushDecrypted t0: ' + t0);
+      // console.log('demuxer push decrypted: next buffer start: ' + nextBufferStart );
+
       if (this.w) {
         // post fragment payload as transferable objects (no copy)
-        this.w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, t0: t0 }, [data]);
+        this.w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, t0: t0, nextBufferStart: nextBufferStart }, [data]);
       } else {
-        this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0);
+        this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart);
       }
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, t0) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, t0, nextBufferStart) {
+      // console.log('demuxer push: nextBufferStart: ' + nextBufferStart);
       if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
         if (this.decrypter == null) {
           this.decrypter = new _decrypter2.default(this.hls);
@@ -3871,10 +3879,10 @@ var Demuxer = function () {
 
         var localthis = this;
         this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function (decryptedData) {
-          localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0);
+          localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart);
         });
       } else {
-        this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0);
+        this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart);
       }
     }
   }, {
@@ -4515,8 +4523,9 @@ var TSDemuxer = function () {
 
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
-      _logger.logger.info('tsdemuxer t0: ' + t0);
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0, nextBufferStart) {
+      // logger.info('tsdemuxer t0: ' + t0);
+      // console.log('tsdemuer next buffer start: ' + nextBufferStart);
       var avcData,
           aacData,
           id3Data,
@@ -4589,7 +4598,7 @@ var TSDemuxer = function () {
                     // if audio PID is undefined OR if we have audio codec info,
                     // we have all codec info !
                     if (this._avcTrack.codec && (aacId === -1 || this._aacTrack.codec)) {
-                      this.remux(data, t0);
+                      this.remux(data, t0, nextBufferStart);
                       return;
                     }
                   }
@@ -4609,7 +4618,7 @@ var TSDemuxer = function () {
                     // if video PID is undefined OR if we have video codec info,
                     // we have all codec infos !
                     if (this._aacTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
-                      this.remux(data, t0);
+                      this.remux(data, t0, nextBufferStart);
                       return;
                     }
                   }
@@ -4660,13 +4669,13 @@ var TSDemuxer = function () {
       if (id3Data) {
         this._parseID3PES(this._parsePES(id3Data));
       }
-      this.remux(null, t0);
+      this.remux(null, t0, nextBufferStart);
     }
   }, {
     key: 'remux',
-    value: function remux(data, t0) {
+    value: function remux(data, t0, nextBufferStart) {
       _logger.logger.info('tsdemuxer passing t0 to remux: ' + t0);
-      this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
+      this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0, nextBufferStart);
     }
   }, {
     key: 'destroy',
@@ -5540,6 +5549,21 @@ var BufferHelper = function () {
       // if( bufferStart == bufferEnd && bufferEnd != 0) { debugger; }
       return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
     }
+  }, {
+    key: "nextBufferAfterPos",
+    value: function nextBufferAfterPos(media, pos) {
+
+      if (!media || !media.buffered) {
+        return;
+      }
+
+      for (var i = 0; i < media.buffered.length; i++) {
+        if (media.buffered.start(i) <= pos) {
+          continue;
+        }
+        return media.buffered.start(i);
+      }
+    }
   }]);
 
   return BufferHelper;
@@ -5817,8 +5841,8 @@ var Hls = function () {
           capLevelToPlayerSize: false,
           maxBufferLength: 30,
           maxBufferSize: 60 * 1000 * 1000,
-          maxBufferHole: 5,
-          maxSeekHole: 2,
+          maxBufferHole: 0.1,
+          maxSeekHole: 10,
           maxFragLookUpTolerance: 0.2,
           liveSyncDurationCount: 3,
           liveMaxLatencyDurationCount: Infinity,
@@ -7281,7 +7305,8 @@ var MP4Remuxer = function () {
     }
   }, {
     key: 'remux',
-    value: function remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, data, t0) {
+    value: function remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, data, t0, nextBufferStart) {
+      // console.log('MP4 Remuxer: next buffer start: ' + nextBufferStart);
       // generate Init Segment if needed
       if (!this.ISGenerated) {
         this.generateIS(audioTrack, videoTrack, timeOffset, t0);
@@ -7289,7 +7314,7 @@ var MP4Remuxer = function () {
       if (this.ISGenerated) {
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (videoTrack.samples.length) {
-          this.remuxVideo(videoTrack, timeOffset, contiguous, t0);
+          this.remuxVideo(videoTrack, timeOffset, contiguous, t0, nextBufferStart);
         }
         //logger.log('nb AAC samples:' + audioTrack.samples.length);
         if (audioTrack.samples.length) {
@@ -7392,7 +7417,7 @@ var MP4Remuxer = function () {
     }
   }, {
     key: 'remuxVideo',
-    value: function remuxVideo(track, timeOffset, contiguous, t0) {
+    value: function remuxVideo(track, timeOffset, contiguous, t0, nextBufferStart) {
       var offset = 8,
           pesTimeScale = this.PES_TIMESCALE,
           pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
@@ -7453,10 +7478,25 @@ var MP4Remuxer = function () {
       // let's signal the same sample duration for all samples
       // set this constant duration as being the avg delta between consecutive DTS.
       sample = inputSamples[inputSamples.length - 1];
-      lastDTS = Math.max(this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS, 0);
+      // lastDTS = Math.max(this._PTSNormalize(sample.dts,nextAvcDts) - this._initDTS,0);
 
       lastDTS = sample.dts - firstSampleDTS + firstPTS;
       mp4SampleDuration = Math.round((lastDTS - firstDTS) / (pes2mp4ScaleFactor * (inputSamples.length - 1)));
+
+      var segmentEndTime = (lastDTS + mp4SampleDuration * pes2mp4ScaleFactor) / pesTimeScale;
+      var bufferOffset = segmentEndTime - nextBufferStart;
+      if (bufferOffset > 0 && bufferOffset < 2) {
+        bufferOffset += 0.1; // add extra offset
+        // console.log('next buffer start: adjusting offset: ' + bufferOffset);
+        var _oldPTS = firstPTS;
+        var newFirstPTS = firstPTS = firstPTS - Math.round(bufferOffset * pesTimeScale);
+        // console.log('previous firstPTS: ' + oldPTS + '  next firstPTS: ' + newFirstPTS); 
+        firstDTS = firstPTS = newFirstPTS;
+        lastDTS = sample.dts - firstSampleDTS + firstPTS;
+        mp4SampleDuration = Math.round((lastDTS - firstDTS) / (pes2mp4ScaleFactor * (inputSamples.length - 1)));
+      } else if (bufferOffset > 2) {
+        // console.log('NOT adjusting; bufferOffset over threshold: ' + bufferOffset);
+      }
 
       this.fps = inputSamples.length / ((lastDTS - firstDTS) / pesTimeScale);
       //
@@ -7541,7 +7581,7 @@ var MP4Remuxer = function () {
         startPTS: firstPTS / pesTimeScale,
         endPTS: (lastPTS + pes2mp4ScaleFactor * mp4SampleDuration) / pesTimeScale,
         startDTS: firstDTS / pesTimeScale,
-        endDTS: this.nextAvcDts / pesTimeScale,
+        endDTS: (lastPTS + pes2mp4ScaleFactor * mp4SampleDuration) / pesTimeScale,
         fps: this.fps,
         type: 'video',
         nb: outputSamples.length
