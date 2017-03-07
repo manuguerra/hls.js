@@ -1,16 +1,13 @@
 {
-  "name": "hls.js",
-  "version": "0.6.0",
+  "name": "connect-hls.js",
+  "version": "1.0.1",
   "license": "Apache-2.0",
-  "description": "Media Source Extension - HLS library, by/for Dailymotion",
-  "homepage": "https://github.com/dailymotion/hls.js",
+  "description": "Media Source Extension - HLS library, by/for Dailymotion | Modified for Connect",
+  "homepage": "https://github.com/manuguerra/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dailymotion/hls.js"
-  },
-  "bugs": {
-    "url": "https://github.com/dailymotion/hls.js/issues"
+    "url": "https://github.com/manuguerra/hls.js"
   },
   "main": "./lib/index.js",
   "private": false,
