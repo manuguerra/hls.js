@@ -7,7 +7,7 @@
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/manuguerra/hls.js"
+    "url": "https://github.com/manuguerra/hls.js.git#connect"
   },
   "main": "./lib/index.js",
   "private": false,
