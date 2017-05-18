@@ -2503,12 +2503,6 @@ var StreamController = function (_EventHandler) {
               this.retryDate = performance.now() + delay;
               // retry loading state
               this.state = State.FRAG_LOADING_WAITING_RETRY;
-            } else {
-              _logger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
-              // redispatch same error but with fatal set to true
-              data.fatal = true;
-              this.hls.trigger(_events2.default.ERROR, data);
-              this.state = State.ERROR;
             }
           }
           break;
