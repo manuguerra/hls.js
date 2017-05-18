@@ -1,6 +1,6 @@
 {
   "name": "connect-hls.js",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "Apache-2.0",
   "description": "Media Source Extension - HLS library, by/for Dailymotion | Modified for Connect",
   "homepage": "https://github.com/manuguerra/hls.js",
