@@ -320,8 +320,9 @@ class StreamController extends EventHandler {
                 let maxThreshold = config.fragLoadingLoopThreshold;
                 // if this frag has already been loaded 3 times, and if it has been reloaded recently
                 if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
-                  hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
-                  return;
+                    logger.warn('skipping 0.5s because of fragloop error');
+                    video.currentTime += 0.5;
+                    return;
                 }
               } else {
                 frag.loadCounter = 1;
