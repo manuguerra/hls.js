@@ -35,6 +35,7 @@ class FragmentLoader extends EventHandler {
     // detach fragment loader on load success
     this.frag.loader = undefined;
     this.hls.trigger(Event.FRAG_LOADED, {payload: payload, frag: this.frag, stats: stats});
+    this.frag._loadSuccessful = true;
   }
 
   loaderror(event) {
