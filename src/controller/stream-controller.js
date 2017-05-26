@@ -120,8 +120,6 @@ class StreamController extends EventHandler {
   doTick() {
     var pos, level, levelDetails, hls = this.hls, config = hls.config;
     
-    console.log('state: ' + this.state);
-
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
