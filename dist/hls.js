@@ -1652,8 +1652,6 @@ var StreamController = function (_EventHandler) {
           hls = this.hls,
           config = hls.config;
 
-      console.log('state: ' + this.state);
-
       switch (this.state) {
         case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -7554,13 +7552,11 @@ var MP4Remuxer = function () {
       // if (firstDTS/pesTimeScale > 100000) { debugger; }
       moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
-
       this.observer.trigger(_events2.default.FRAG_PARSING_DATA, {
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
         endPTS: (lastPTS + pes2mp4ScaleFactor * mp4SampleDuration) / pesTimeScale,
-        // endPTS: lastPTS / pesTimeScale,
         startDTS: firstDTS / pesTimeScale,
         endDTS: this.nextAvcDts / pesTimeScale,
         fps: this.fps,
