@@ -193,7 +193,11 @@
 
   remux(data, t0) {
 	logger.info('tsdemuxer passing t0 to remux: ' + t0);
-    this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
+
+    //this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
+    //
+    // ignore audio track
+    this.remuxer.remux({samples: []}, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
   }
 
   destroy() {
