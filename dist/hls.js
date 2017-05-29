@@ -4681,7 +4681,10 @@ var TSDemuxer = function () {
     key: 'remux',
     value: function remux(data, t0) {
       _logger.logger.info('tsdemuxer passing t0 to remux: ' + t0);
-      this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
+
+      //this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
+      // ignore audio track
+      this.remuxer.remux({ samples: [] }, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
     }
   }, {
     key: 'destroy',
