@@ -546,6 +546,12 @@ class MP4 {
     for (i = 0; i < len; i++) {
       sample = samples[i];
       duration = sample.duration;
+      
+      // temporary: forcing 1024 for audio;
+      if (track.type == 'audio') { 
+          duration = 1024; 
+      }
+
       size = sample.size;
       flags = sample.flags;
       cts = sample.cts;
