@@ -234,72 +234,72 @@ class BufferController extends EventHandler {
   }
 
   doAppending() {
-    var hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
-    if (sourceBuffer) {
-      if (this.media.error) {
-        segments = [];
-        logger.error('trying to append although a media error occured, flush segment and abort');
-        return;
-      }
-      for (var type in sourceBuffer) {
-        if (sourceBuffer[type].updating) {
-          //logger.log('sb update in progress');
-          return;
-        }
-      }
-      if (segments.length) {
-        var segment = segments.shift();
-        try {
-          //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-		  // if (sourceBuffer.firstLoaded && !sourceBuffer.video.updating) { 
-		  	// sourceBuffer[segment.type].timestampOffset += 10;
-		  // }
-          sourceBuffer[segment.type].appendBuffer(segment.data);
-		  sourceBuffer.firstLoaded = true;
-
-		  // setTimeout( function() {
-		  // 	sourceBuffer[segment.type].timestampOffset = 15;
-		  // }, 5);
-
-		  logger.info(segment);
-          this.appendError = 0;
-          this.appended++;
-        } catch(err) {
-          // in case any error occured while appending, put back segment in segments table
-          logger.error(`error while trying to append buffer:${err.message}`);
-          segments.unshift(segment);
-          var event = {type: ErrorTypes.MEDIA_ERROR};
-          if(err.code !== 22) {
-            if (this.appendError) {
-              this.appendError++;
-            } else {
-              this.appendError = 1;
-            }
-            event.details = ErrorDetails.BUFFER_APPEND_ERROR;
-            event.frag = this.fragCurrent;
-            /* with UHD content, we could get loop of quota exceeded error until
-              browser is able to evict some data from sourcebuffer. retrying help recovering this
-            */
-            if (this.appendError > hls.config.appendErrorMaxRetry) {
-              logger.log(`fail ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+      var hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
+      if (sourceBuffer) {
+          if (this.media.error) {
               segments = [];
-              event.fatal = true;
-              hls.trigger(Event.ERROR, event);
+              logger.error('trying to append although a media error occured, flush segment and abort');
               return;
-            } else {
-              event.fatal = false;
-              hls.trigger(Event.ERROR, event);
-            }
-          } else {
-            // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-            // let's stop appending any segments, and report BUFFER_FULL_ERROR error
-            segments = [];
-            event.details = ErrorDetails.BUFFER_FULL_ERROR;
-            hls.trigger(Event.ERROR,event);
           }
-        }
+          for (var type in sourceBuffer) {
+              if (sourceBuffer[type].updating) {
+                  //logger.log('sb update in progress');
+                  return;
+              }
+          }
+          if (segments.length) {
+              var segment = segments.shift();
+              try {
+                  //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+                  // if (sourceBuffer.firstLoaded && !sourceBuffer.video.updating) { 
+                  // sourceBuffer[segment.type].timestampOffset += 10;
+                  // }
+                  sourceBuffer[segment.type].appendBuffer(segment.data);
+                  sourceBuffer.firstLoaded = true;
+
+                  // setTimeout( function() {
+                  // 	sourceBuffer[segment.type].timestampOffset = 15;
+                  // }, 5);
+
+                  logger.info(segment);
+                  this.appendError = 0;
+                  this.appended++;
+              } catch(err) {
+                  // in case any error occured while appending, put back segment in segments table
+                  logger.error(`error while trying to append buffer:${err.message}`);
+                  segments.unshift(segment);
+                  var event = {type: ErrorTypes.MEDIA_ERROR};
+                  if(err.code !== 22) {
+                      if (this.appendError) {
+                          this.appendError++;
+                      } else {
+                          this.appendError = 1;
+                      }
+                      event.details = ErrorDetails.BUFFER_APPEND_ERROR;
+                      event.frag = this.fragCurrent;
+                      /* with UHD content, we could get loop of quota exceeded error until
+                         browser is able to evict some data from sourcebuffer. retrying help recovering this
+                         */
+                      if (this.appendError > hls.config.appendErrorMaxRetry) {
+                          logger.log(`fail ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+                          segments = [];
+                          event.fatal = true;
+                          hls.trigger(Event.ERROR, event);
+                          return;
+                      } else {
+                          event.fatal = false;
+                          hls.trigger(Event.ERROR, event);
+                      }
+                  } else {
+                      // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+                      // let's stop appending any segments, and report BUFFER_FULL_ERROR error
+                      segments = [];
+                      event.details = ErrorDetails.BUFFER_FULL_ERROR;
+                      hls.trigger(Event.ERROR,event);
+                  }
+              }
+          }
       }
-    }
   }
 
   /*

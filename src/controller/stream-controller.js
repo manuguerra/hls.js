@@ -886,32 +886,32 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingData(data) {
-    if (this.state === State.PARSING) {
-      this.tparse2 = Date.now();
-      var level = this.levels[this.level],
-          frag = this.fragCurrent;
+      if (this.state === State.PARSING) {
+          this.tparse2 = Date.now();
+          var level = this.levels[this.level],
+              frag = this.fragCurrent;
 
-      logger.info(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
+          logger.info(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
 
-      var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS),
-          hls = this.hls;
-      hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
+          var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS),
+              hls = this.hls;
+          hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
 
-      [data.data1, data.data2].forEach(buffer => {
-        if (buffer) {
-          this.pendingAppending++;
-          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer});
-        }
-      });
+          [data.data1, data.data2].forEach(buffer => {
+              if (buffer) {
+                  this.pendingAppending++;
+                  hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer});
+              }
+          });
 
-      this.nextLoadPosition = data.endPTS;
-      this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
+          this.nextLoadPosition = data.endPTS;
+          this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
 
-      //trigger handler right now
-      this.tick();
-    } else {
-      logger.warn(`not in PARSING state but ${this.state}, ignoring FRAG_PARSING_DATA event`);
-    }
+          //trigger handler right now
+          this.tick();
+      } else {
+          logger.warn(`not in PARSING state but ${this.state}, ignoring FRAG_PARSING_DATA event`);
+      }
   }
 
   onFragParsed(data) {
