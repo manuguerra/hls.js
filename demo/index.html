@@ -93,6 +93,10 @@ header {
 
     <video id="video" controls autoplay class="videoCentered"></video><br>
     <canvas id="buffered_c" height="15" class="videoCentered" onclick="buffered_seek(event);"></canvas><br><br>
+
+    <canvas id="buffered_v" height="15" class="videoCentered" onclick=""></canvas><br><br>
+    <canvas id="buffered_a" height="15" class="videoCentered" onclick="" style="display: block;"></canvas><br><br>
+
     <pre id="HlsStatus" class="center"></pre>
 
     <div class="center" id="toggleButtons">
@@ -199,7 +203,7 @@ header {
 $(document).ready(function() {
   $('#streamSelect').change(function()      { $('#streamURL').val($('#streamSelect').val());loadStream($('#streamURL').val());});
   $('#streamURL').change(function()           { loadStream($('#streamURL').val());});
-  $('#videoSize').change(function()          {  $('#video').width($('#videoSize').val()); $('#buffered_c').width($('#videoSize').val());  });
+  $('#videoSize').change(function()          {  $('#video').width($('#videoSize').val()); $('canvas').width($('#videoSize').val());  });
    $("#PlaybackControl").hide();
    $("#QualityLevelControl").hide();
    $("#MetricsDisplay").hide();
@@ -663,6 +667,49 @@ function timeRangesToString(r) {
     ctx.fillStyle = "black";
     ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = "gray";
+
+    var canvas_video = $('#buffered_v')[0];
+    var ctx_video = canvas_video.getContext('2d');
+    ctx_video.fillStyle = "black";
+    ctx_video.fillRect(0,0,canvas_video.width, canvas_video.height);
+    ctx_video.fillStyle = "blue";
+
+    if (hls && hls.bufferController) {
+        if(!canvas_video.width || canvas_video.width !== v.clientWidth) {
+            canvas_video.width = v.clientWidth;
+        }
+
+        var r_video = hls.bufferController.sourceBuffer.video.buffered;
+        var pos_video = v.currentTime,bufferLen;
+
+        for (var i=0, bufferLen=0; i < r_video.length; i++) {
+            var start = r_video.start(i)/v.duration * canvas_video.width;
+            var end = r_video.end(i)/v.duration * canvas_video.width;
+            ctx_video.fillRect(start, 3, Math.max(2, end-start), 10);
+        }
+    }
+
+    var canvas_audio = $('#buffered_a')[0];
+    var ctx_audio = canvas_audio.getContext('2d');
+    ctx_audio.fillStyle = "black";
+    ctx_audio.fillRect(0,0,canvas_audio.width,canvas_audio.height);
+    ctx_audio.fillStyle = "orange";
+
+    if (hls && hls.bufferController) {
+        if(!canvas_audio.width || canvas_audio.width !== v.clientWidth) {
+            canvas_audio.width = v.clientWidth;
+        }
+
+        var r_audio = hls.bufferController.sourceBuffer.audio.buffered;
+        var pos_audio = v.currentTime,bufferLen;
+
+        for (var i=0, bufferLen=0; i < r_audio.length; i++) {
+            var start = r_audio.start(i)/v.duration * canvas_audio.width;
+            var end = r_audio.end(i)/v.duration * canvas_audio.width;
+            ctx_audio.fillRect(start, 3, Math.max(2, end-start), 10);
+        }
+    }
+
     if (r) {
       if(!canvas.width || canvas.width !== v.clientWidth) {
         canvas.width = v.clientWidth;
