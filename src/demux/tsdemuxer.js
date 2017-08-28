@@ -23,7 +23,6 @@
     this.remuxerClass = remuxerClass;
     this.lastCC = 0;
     this.typeSupported = typeSupported;
-    debugger;
     this.remuxer = new this.remuxerClass(observer, typeSupported);
   }
 
