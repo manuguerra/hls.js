@@ -18,11 +18,13 @@
 
  class TSDemuxer {
 
-  constructor(observer,remuxerClass) {
+  constructor(observer,remuxerClass, config, typeSupported) {
     this.observer = observer;
     this.remuxerClass = remuxerClass;
     this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer);
+    this.typeSupported = typeSupported;
+    debugger;
+    this.remuxer = new this.remuxerClass(observer, typeSupported);
   }
 
   static probe(data) {
@@ -40,7 +42,7 @@
     this.lastAacPTS = null;
     this.aacOverFlow = null;
     this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, nbNalu : 0};
-    this._aacTrack = {container : 'video/mp2t', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
+    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
     this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
     this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0};
     this.remuxer.switchLevel();
@@ -54,8 +56,8 @@
   // feed incoming data to the front of the parsing pipeline
   push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, t0) {
     logger.info('tsdemuxer t0: ' + t0);
-    var avcData, aacData, id3Data,
-        start, len = data.length, stt, pid, atf, offset,
+    var avcData, audioData, id3Data,
+        start, len = data.length, stt, pid, atf, offset, pes,
         codecsOnly = this.remuxer.passthrough;
 
     this.audioCodec = audioCodec;
@@ -83,7 +85,7 @@
 
     var pmtParsed = this.pmtParsed,
         avcId = this._avcTrack.id,
-        aacId = this._aacTrack.id,
+        audioId = this._audioTrack.id,
         id3Id = this._id3Track.id;
 
 	var firstFrame = true;
@@ -116,7 +118,7 @@
                   // if we have video codec info AND
                   // if audio PID is undefined OR if we have audio codec info,
                   // we have all codec info !
-                  if (this._avcTrack.codec && (aacId === -1 || this._aacTrack.codec)) {
+                  if (this._avcTrack.codec && (audioId === -1 || this._audioTrack.codec)) {
                     this.remux(data, t0);
                     return;
                   }
@@ -128,25 +130,29 @@
               avcData.data.push(data.subarray(offset, start + 188));
               avcData.size += start + 188 - offset;
             }
-          } else if (pid === aacId) {
+          } else if (pid === audioId ) {
             if (stt) {
-              if (aacData) {
-                this._parseAACPES(this._parsePES(aacData));
+              if (audioData && (pes = this._parsePES(audioData))) {
+                if (this._audioTrack.isAAC) {
+                  this._parseAACPES(pes);
+                } else {
+                    this._parseMPEGPES(pes);
+                }
                 if (codecsOnly) {
                   // here we now that we have audio codec info
                   // if video PID is undefined OR if we have video codec info,
                   // we have all codec infos !
-                  if (this._aacTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
+                  if (this._audioTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
                     this.remux(data, t0);
                     return;
                   }
                 }
               }
-              aacData = {data: [], size: 0};
+              audioData = {data: [], size: 0};
             }
-            if (aacData) {
-              aacData.data.push(data.subarray(offset, start + 188));
-              aacData.size += start + 188 - offset;
+            if (audioData ) {
+              audioData.data.push(data.subarray(offset, start + 188));
+              audioData.size += start + 188 - offset;
             }
           } else if (pid === id3Id) {
             if (stt) {
@@ -167,10 +173,10 @@
           if (pid === 0) {
             this._parsePAT(data, offset);
           } else if (pid === this._pmtId) {
-            this._parsePMT(data, offset);
+            this._parsePMT(data, offset, this.typeSupported.mpeg || this.typeSupported.mp3);
             pmtParsed = this.pmtParsed = true;
             avcId = this._avcTrack.id;
-            aacId = this._aacTrack.id;
+            audioId = this._audioTrack.id;
             id3Id = this._id3Track.id;
           }
         }
@@ -182,8 +188,8 @@
     if (avcData) {
       this._parseAVCPES(this._parsePES(avcData));
     }
-    if (aacData) {
-      this._parseAACPES(this._parsePES(aacData));
+    if (audioData) {
+      this._parseAACPES(this._parsePES(audioData));
     }
     if (id3Data) {
       this._parseID3PES(this._parsePES(id3Data));
@@ -193,7 +199,7 @@
 
   remux(data, t0) {
       logger.info('tsdemuxer passing t0 to remux: ' + t0);
-      this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
+      this.remuxer.remux(this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
 
       // to ignore audio track:
       // this.remuxer.remux({samples:[]}, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data, t0);
@@ -211,7 +217,7 @@
     //logger.log('PMT PID:'  + this._pmtId);
   }
 
-  _parsePMT(data, offset) {
+  _parsePMT(data, offset, mpegSupported) {
     var sectionLength, tableEnd, programInfoLength, pid;
     sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
     tableEnd = offset + 3 + sectionLength - 4;
@@ -226,7 +232,7 @@
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         case 0x0f:
           //logger.log('AAC PID:'  + pid);
-          this._aacTrack.id = pid;
+          this._audioTrack.id = pid;
           break;
         // Packetized metadata (ID3)
         case 0x15:
@@ -238,6 +244,13 @@
           //logger.log('AVC PID:'  + pid);
           this._avcTrack.id = pid;
           break;
+        case 0x03:
+        case 0x04:
+          if(!mpegSupported) {
+          } else if (this._audioTrack.id == -1) {
+              this._audioTrack.id = pid;
+              this._audioTrack.isAAC = false;
+          }
         default:
         logger.log('unkown stream type:'  + data[offset]);
         break;
@@ -607,7 +620,7 @@
   }
 
   _parseAACPES(pes) {
-    var track = this._aacTrack,
+    var track = this._audioTrack,
         data = pes.data,
         pts = pes.pts,
         startOffset = 0,
@@ -707,6 +720,94 @@
   _parseID3PES(pes) {
     this._id3Track.samples.push(pes);
   }
+
+  _parseMPEGPES(pes) {
+    var data = pes.data;
+    var pts = pes.pts;
+    var length = data.length;
+    var frameIndex = 0;
+    var offset = 0;
+    var parsed;
+
+    while (offset < length &&
+        (parsed = this._parseMpeg(data, offset, length, frameIndex++, pts)) > 0) {
+        offset += parsed;
+    }
+  }
+
+  _onMpegFrame(data, bitRate, sampleRate, channelCount, frameIndex, pts) {
+    var frameDuration = (1152 / sampleRate) * 1000;
+    var stamp = pts + frameIndex * frameDuration;
+    var track = this._audioTrack;
+
+    track.config = [];
+    track.channelCount = channelCount;
+    track.audiosamplerate = sampleRate;
+    track.duration = this._duration;
+    track.samples.push({unit: data, pts: stamp, dts: stamp});
+    track.len += data.length;
+  }
+
+  _onMpegNoise(data) {
+    logger.warn('mpeg audio has noise: ' + data.length + ' bytes');
+  }
+
+  _parseMpeg(data, start, end, frameIndex, pts) {
+    var BitratesMap = [
+        32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
+        32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
+        32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
+        32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256,
+        8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+    var SamplingRateMap = [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000];
+
+    if (start + 2 > end) {
+        return -1; // we need at least 2 bytes to detect sync pattern
+    }
+    if (data[start] === 0xFF || (data[start + 1] & 0xE0) === 0xE0) {
+        // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
+        if (start + 24 > end) {
+            return -1;
+        }
+        var headerB = (data[start + 1] >> 3) & 3;
+        var headerC = (data[start + 1] >> 1) & 3;
+        var headerE = (data[start + 2] >> 4) & 15;
+        var headerF = (data[start + 2] >> 2) & 3;
+        var headerG = !!(data[start + 2] & 2);
+        if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
+            var columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
+            var bitRate = BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
+            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
+            var sampleRate = SamplingRateMap[columnInSampleRates * 3 + headerF];
+            var padding = headerG ? 1 : 0;
+            var channelCount = data[start + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+            var frameLength = headerC === 3 ?
+                ((headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding) << 2 :
+                ((headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding) | 0;
+            if (start + frameLength > end) {
+                return -1;
+            }
+            if (this._onMpegFrame) {
+                this._onMpegFrame(data.subarray(start, start + frameLength), bitRate, sampleRate, channelCount, frameIndex, pts);
+            }
+            return frameLength;
+        }
+    }
+    // noise or ID3, trying to skip
+    var offset = start + 2;
+    while (offset < end) {
+        if (data[offset - 1] === 0xFF && (data[offset] & 0xE0) === 0xE0) {
+            // sync pattern is found
+            if (this._onMpegNoise) {
+                this._onMpegNoise(data.subarray(start, offset - 1));
+            }
+            return offset - start - 1;
+        }
+        offset++;
+    }
+    return -1;
+  }
+  
 }
 
 export default TSDemuxer;

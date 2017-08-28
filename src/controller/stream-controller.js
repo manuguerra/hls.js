@@ -894,8 +894,15 @@ class StreamController extends EventHandler {
           logger.info(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
 
           var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS),
-              hls = this.hls;
-          hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
+                hls = this.hls;
+                hls.trigger(Event.LEVEL_PTS_UPDATED, {
+                    details:  level.details,
+                    level:    this.level,
+                    drift:    drift,
+                    type:     data.type,
+                    start:    data.startPTS,
+                    end:      data.endPTS
+                });
 
           [data.data1, data.data2].forEach(buffer => {
               if (buffer) {

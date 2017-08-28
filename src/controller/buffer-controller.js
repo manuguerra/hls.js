@@ -18,16 +18,56 @@ class BufferController extends EventHandler {
       Event.BUFFER_APPENDING,
       Event.BUFFER_CODECS,
       Event.BUFFER_EOS,
+      Event.LEVEL_PTS_UPDATED,
       Event.BUFFER_FLUSHING);
 
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
     this.onsbe  = this.onSBUpdateError.bind(this);
+    this.tracks = {};
   }
 
   destroy() {
     EventHandler.prototype.destroy.call(this);
   }
+
+  
+  onLevelPtsUpdated(data) {
+      let type = data.type;
+      let audioTrack = this.tracks.audio;
+
+      // Adjusting `SourceBuffer.timestampOffset` (desired point in the timeline where the next frames should be appended)
+      // in Chrome browser when we detect MPEG audio container and time delta between level PTS and `SourceBuffer.timestampOffset`
+      // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
+      // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
+      // event if SB is in updating state.
+      // More info here: https://github.com/dailymotion/hls.js/issues/332#issuecomment-257986486
+
+      if (type === 'audio' && audioTrack && audioTrack.container === 'audio/mpeg') { // Chrome audio mp3 track
+          let audioBuffer = this.sourceBuffer.audio;
+          let delta = Math.abs(audioBuffer.timestampOffset - data.start);
+
+          // adjust timestamp offset if time delta is greater than 100ms
+          if (delta > 0.1) {
+              let updating = audioBuffer.updating;
+
+              try {
+                  audioBuffer.abort();
+              } catch (err) {
+                  updating = true;
+                  logger.warn('can not abort audio buffer: ' + err);
+              }
+
+              if (!updating) {
+                  logger.warn('change mpeg audio timestamp offset from ' + audioBuffer.timestampOffset + ' to ' + data.start);
+                  audioBuffer.timestampOffset = data.start;
+              } else {
+                  this.audioTimestampOffset = data.start;
+              }
+          }
+      }
+  }
+
 
   onMediaAttaching(data) {
     var media = this.media = data.media;
@@ -98,6 +138,14 @@ class BufferController extends EventHandler {
 
   onSBUpdateEnd() {
 
+    // update timestampOffset
+    if (this.audioTimestampOffset) {
+      let audioBuffer = this.sourceBuffer.audio;
+      logger.warn('change mpeg audio timestamp offset from ' + audioBuffer.timestampOffset + ' to ' + this.audioTimestampOffset);
+      audioBuffer.timestampOffset = this.audioTimestampOffset;
+      delete this.audioTimestampOffset;
+    }
+
     if (this._needsFlush) {
       this.doFlush();
     }
@@ -157,6 +205,7 @@ class BufferController extends EventHandler {
         sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
         sb.addEventListener('updateend', this.onsbue);
         sb.addEventListener('error', this.onsbe);
+        this.tracks[trackName] = {codec: codec, container: track.container};
       }
       this.sourceBuffer = sourceBuffer;
     }

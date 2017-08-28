@@ -9,12 +9,13 @@ import MP4 from '../remux/mp4-generator';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
 class MP4Remuxer {
-  constructor(observer) {
+  constructor(observer, typeSupported) {
     this.observer = observer;
     this.ISGenerated = false;
     this.PES2MP4SCALEFACTOR = 4;
     this.PES_TIMESCALE = 90000;
     this.MP4_TIMESCALE = this.PES_TIMESCALE / this.PES2MP4SCALEFACTOR;
+    this.typeSupported = typeSupported;
   }
 
   get passthrough() {
@@ -33,32 +34,32 @@ class MP4Remuxer {
   }
 
   remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous, data, t0) {
-    // generate Init Segment if needed
-    if (!this.ISGenerated) {
-      this.generateIS(audioTrack,videoTrack,timeOffset, t0);
-	}
-	if (this.ISGenerated) {
-		//logger.log('nb AVC samples:' + videoTrack.samples.length);
-		if (videoTrack.samples.length) {
-		  this.remuxVideo(videoTrack,timeOffset,contiguous, t0);
-		}
-		//logger.log('nb AAC samples:' + audioTrack.samples.length);
-		if (audioTrack.samples.length) {
-		  this.remuxAudio(audioTrack,timeOffset,contiguous, t0);
-		}
-		//logger.log('nb ID3 samples:' + audioTrack.samples.length);
-		if (id3Track.samples.length) {
-		  this.remuxID3(id3Track,timeOffset);
-		}
-		//logger.log('nb ID3 samples:' + audioTrack.samples.length);
-		if (textTrack.samples.length) {
-		  this.remuxText(textTrack,timeOffset);
-		}
-	}
-    //notify end of parsing
-    this.observer.trigger(Event.FRAG_PARSED, {
-        fps: this.fps
-    });
+      // generate Init Segment if needed
+      if (!this.ISGenerated) {
+          this.generateIS(audioTrack,videoTrack,timeOffset, t0);
+      }
+      if (this.ISGenerated) {
+          //logger.log('nb AVC samples:' + videoTrack.samples.length);
+          if (videoTrack.samples.length) {
+              this.remuxVideo(videoTrack,timeOffset,contiguous, t0);
+          }
+          //logger.log('nb AAC samples:' + audioTrack.samples.length);
+          if (audioTrack.samples.length) {
+              this.remuxAudio(audioTrack,timeOffset,contiguous, t0);
+          }
+          //logger.log('nb ID3 samples:' + audioTrack.samples.length);
+          if (id3Track.samples.length) {
+              this.remuxID3(id3Track,timeOffset);
+          }
+          //logger.log('nb ID3 samples:' + audioTrack.samples.length);
+          if (textTrack.samples.length) {
+              this.remuxText(textTrack,timeOffset);
+          }
+      }
+      //notify end of parsing
+      this.observer.trigger(Event.FRAG_PARSED, {
+          fps: this.fps
+      });
   }
 
   generateIS(audioTrack,videoTrack,timeOffset, t0) {
@@ -66,6 +67,8 @@ class MP4Remuxer {
         audioSamples = audioTrack.samples,
         videoSamples = videoTrack.samples,
         pesTimeScale = this.PES_TIMESCALE,
+        typeSupported = this.typeSupported,
+        container = 'audio/mp4',
         tracks = {},
         data = { tracks : tracks, unique : false },
         computePTSDTS = (this._initPTS === undefined),
@@ -87,17 +90,29 @@ class MP4Remuxer {
             }
             return greatestCommonDivisor(b, a % b);
         };
-        audioTrack.timescale = audioTrack.audiosamplerate / greatestCommonDivisor(audioTrack.audiosamplerate,1024);
+        audioTrack.timescale = audioTrack.audiosamplerate / 
+            greatestCommonDivisor(audioTrack.audiosamplerate, (audioTrack.isAAC ? 1024 : 1152) );
       }
+
+      if (!audioTrack.isAAC) {
+          if (typeSupported.mpeg === true) { // Chrome
+              container = 'audio/mpeg';
+              audioTrack.codec = '';
+          } else if (typeSupported.mp3 === true) { // Firefox
+              audioTrack.codec = 'mp3';
+          }
+      }
+
       logger.log ('audio mp4 timescale :'+ audioTrack.timescale);
       tracks.audio = {
-        container : 'audio/mp4',
-        codec :  audioTrack.codec,
-        initSegment : MP4.initSegment([audioTrack]),
-        metadata : {
-          channelCount : audioTrack.channelCount
-        }
+          container:       container,
+          codec:           audioTrack.codec,
+          initSegment:     MP4.initSegment([audioTrack]),
+          metadata:  {
+              channelCount:  audioTrack.channelCount
+          }
       };
+
       if (computePTSDTS) {
         // remember first PTS of this demuxing context. for audio, PTS + DTS ...
         // initPTS = initDTS = audioSamples[0].pts - pesTimeScale * timeOffset;
