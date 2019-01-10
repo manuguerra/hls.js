@@ -355,17 +355,17 @@
       switch(unit.type) {
         //NDR
          case 1:
-		   if( firstFrame &&
-			   navigator.appVersion.indexOf('Mac') > -1 && 
-			   navigator.userAgent.toLowerCase().indexOf('chrome') > -1
-		   ) { 
-
-			   console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
-			   push = false;
-			   shouldExit = true;
-			   return false;
-			   break;
-		   }
+//             if( firstFrame &&
+//                 navigator.appVersion.indexOf('Mac') > -1 && 
+//                 navigator.userAgent.toLowerCase().indexOf('chrome') > -1
+//             ) { 
+//
+//                 console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
+//                 push = false;
+//                 shouldExit = true;
+//                 return false;
+//                 break;
+//             }
            push = true;
            if(debug) {
             debugString += 'NDR ';
@@ -381,18 +381,18 @@
           break;
         //SEI
         case 6:
-		   SEICounter++;
-		   if( firstFrame && 
-			   navigator.appVersion.indexOf("Mac") > -1 && 
-			   navigator.userAgent.toLowerCase().indexOf('chrome') > -1 &&
-			   SEICounter > 1
-		   ) { 
-			    console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
-			    push = false;
-                            shouldExit = true;
-                            return false;
-			    break;
-		    }
+              SEICounter++;
+              // if( firstFrame && 
+              //     navigator.appVersion.indexOf("Mac") > -1 && 
+              //     navigator.userAgent.toLowerCase().indexOf('chrome') > -1 &&
+              //     SEICounter > 1
+              // ) { 
+              //     console.warn('first frame with ' + unit.type + '; skipping to prevent chrome hardware decoder issue on osx'); 
+              //     push = false;
+              //     shouldExit = true;
+              //     return false;
+              //     break;
+              // }
           push = true;
           if(debug) {
             debugString += 'SEI ';
